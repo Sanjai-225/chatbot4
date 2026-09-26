@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ chatbot_title }}</title>
+<style>
+  :root {
+    --sky-top: #0d1b2a;
+    --sky-bottom: #1b2a41;
+    --accent: #4fc3f7;
+    --accent-soft: #81d4fa;
+    --panel: rgba(255, 255, 255, 0.06);
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --text-main: #e8f1f7;
+    --text-muted: #9fb3c8;
+    --user-bubble: #4fc3f7;
+    --bot-bubble: rgba(255, 255, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Drifting cloud decorations */
+  .cloud {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    filter: blur(1px);
+    pointer-events: none;
+  }
+  .cloud::before, .cloud::after {
+    content: "";
+    position: absolute;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+  }
+  .cloud1 { width: 180px; height: 60px; top: 8%; left: -200px; animation: drift 40s linear infinite; }
+  .cloud1::before { width: 90px; height: 90px; top: -40px; left: 20px; }
+  .cloud1::after { width: 70px; height: 70px; top: -25px; left: 90px; }
+  .cloud2 { width: 140px; height: 50px; top: 22%; left: -160px; animation: drift 55s linear infinite; animation-delay: 10s; }
+  .cloud2::before { width: 70px; height: 70px; top: -30px; left: 15px; }
+  .cloud2::after { width: 55px; height: 55px; top: -20px; left: 70px; }
+  .cloud3 { width: 120px; height: 40px; top: 65%; left: -140px; animation: drift 65s linear infinite; animation-delay: 5s; }
+  .cloud3::before { width: 60px; height: 60px; top: -25px; left: 10px; }
+  .cloud3::after { width: 45px; height: 45px; top: -15px; left: 60px; }
+
+  @keyframes drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(160vw); }
+  }
+
+  header {
+    width: 100%;
+    max-width: 760px;
+    padding: 28px 20px 12px;
+    text-align: center;
+    z-index: 1;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  header h1 .icon {
+    display: inline-block;
+    margin-right: 10px;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  header p {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  .chat-shell {
+    width: 100%;
+    max-width: 760px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 20px 20px;
+    z-index: 1;
+  }
+
+  .chat-window {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 420px;
+    max-height: 60vh;
+    backdrop-filter: blur(6px);
+  }
+
+  .msg {
+    max-width: 78%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    line-height: 1.45;
+    font-size: 0.96rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    animation: pop 0.25s ease;
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--user-bubble);
+    color: #06202f;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--bot-bubble);
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg.error {
+    align-self: flex-start;
+    background: rgba(255, 99, 99, 0.15);
+    border: 1px solid rgba(255, 99, 99, 0.4);
+    color: #ffb3b3;
+  }
+
+  .typing {
+    align-self: flex-start;
+    display: flex;
+    gap: 5px;
+    padding: 12px 16px;
+    background: var(--bot-bubble);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+  }
+
+  .typing span {
+    width: 7px;
+    height: 7px;
+    background: var(--accent-soft);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+    40% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  .input-bar {
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  #message-input {
+    flex: 1;
+    resize: none;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text-main);
+    padding: 12px 16px;
+    font-size: 0.96rem;
+    font-family: inherit;
+    max-height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #message-input:focus {
+    border-color: var(--accent);
+  }
+
+  #send-btn {
+    background: var(--accent);
+    border: none;
+    color: #06202f;
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: transform 0.15s, background 0.2s;
+    white-space: nowrap;
+  }
+
+  #send-btn:hover:not(:disabled) {
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+
+  #send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .chat-window::-webkit-scrollbar { width: 8px; }
+  .chat-window::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+
+  footer {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    padding-bottom: 16px;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+  <div class="cloud cloud1"></div>
+  <div class="cloud cloud2"></div>
+  <div class="cloud cloud3"></div>
+
+  <header>
+    <h1><span class="icon">☁️</span>{{ chatbot_title }}</h1>
+    <p>Ask me anything about cloud computing — architecture, providers, security, and more.</p>
+  </header>
+
+  <div class="chat-shell">
+    <div id="chat-window" class="chat-window">
+      <div class="msg bot">
+        Hi! I'm {{ chatbot_title }}. I can help with cloud computing topics like AWS, Azure, Google Cloud, containers, serverless, security, and cost optimization. What would you like to know?
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="message-input" rows="1" placeholder="Type your cloud computing question..."></textarea>
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <footer>{{ chatbot_title }} — powered by Gemini</footer>
+
+<script>
+  const chatWindow = document.getElementById("chat-window");
+  const input = document.getElementById("message-input");
+  const sendBtn = document.getElementById("send-btn");
+
+  function addMessage(text, type) {
+    const div = document.createElement("div");
+    div.className = "msg " + type;
+    div.textContent = text;
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return div;
+  }
+
+  function showTyping() {
+    const div = document.createElement("div");
+    div.className = "typing";
+    div.id = "typing-indicator";
+    div.innerHTML = "<span></span><span></span><span></span>";
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  function hideTyping() {
+    const el = document.getElementById("typing-indicator");
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage(text, "user");
+    input.value = "";
+    input.style.height = "auto";
+    sendBtn.disabled = true;
+    showTyping();
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      const data = await res.json();
+      hideTyping();
+
+      if (!res.ok) {
+        addMessage(data.error || "Something went wrong.", "error");
+      } else {
+        addMessage(data.reply, "bot");
+      }
+    } catch (err) {
+      hideTyping();
+      addMessage("Network error. Please try again.", "error");
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  });
+</script>
+
+</body>
+</html>
